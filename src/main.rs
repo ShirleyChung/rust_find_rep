@@ -1,5 +1,7 @@
 use text_colorizer::*;
 use std::env;
+use regex::Regex;
+use std::fs;
 
 #[derive(Debug)]
 struct Arguments {
@@ -9,6 +11,9 @@ struct Arguments {
     output: String,
 }
 
+/**
+解析參數
+*/
 fn parse_args() -> Arguments {
     let args: Vec<String> = env::args().skip(1).collect(); // 略掉第一個參數即本程式檔名
 
@@ -23,11 +28,29 @@ fn parse_args() -> Arguments {
                 output: args[3].clone() }
 }
 
+/**
+使用regex替換字串
+*/
+fn replace(target: &str, replacement: &str, text: &str) -> Result<String, regex::Error> {
+    let regex = Regex::new(target)?;
+    Ok(regex.replace_all(text, replacement).to_string())
+}
+
 fn main() {
     let args = parse_args();
-    println!("Hello, world! {} {} {} {}", 
-            args.target.red(), 
-            args.replacement.yellow(), 
-            args.filename.green(), 
-            args.output.purple());
+
+    if let Ok(data) = fs::read_to_string(&args.filename) {
+        if let Ok(replaced_data) = replace(&args.target, &args.replacement, &data) {
+            if let Err(e) = fs::write(&args.output, &replaced_data) {
+                println!("fail to write {}: {:?}", args.output, e);
+            } else {
+                println!("{} save successfully!", args.output);
+            }
+
+        } else {
+            println!("error to replace with {}", &args.replacement.red());
+        }
+    } else {
+        println!("error to read {}", &args.filename.yellow());
+    }
 }
